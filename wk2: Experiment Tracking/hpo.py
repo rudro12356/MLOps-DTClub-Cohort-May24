@@ -34,13 +34,19 @@ def run_optimization(data_path: str, num_trials: int):
     X_val, y_val = load_pickle(os.path.join(data_path, "val.pkl"))
 
     def objective(params):
+        # start mlflow run
+        with mlflow.start_run(run_name="Random Forest Hyperopt"):
+            # log model parameters
+            mlflow.log_param("max_depth", params['max_depth'])
+            mlflow.log_param("n_estimators", params['n_estimators'])
+            mlflow.log_param("min_samples_split", params['min_samples_split'])
+            mlflow.log_param("min_samples_leaf", params['min_samples_leaf'])
+            rf = RandomForestRegressor(**params)
+            rf.fit(X_train, y_train)
+            y_pred = rf.predict(X_val)
+            rmse = mean_squared_error(y_val, y_pred, squared=False)
 
-        rf = RandomForestRegressor(**params)
-        rf.fit(X_train, y_train)
-        y_pred = rf.predict(X_val)
-        rmse = mean_squared_error(y_val, y_pred, squared=False)
-
-        return {'loss': rmse, 'status': STATUS_OK}
+            return {'loss': rmse, 'status': STATUS_OK}
 
     search_space = {
         'max_depth': scope.int(hp.quniform('max_depth', 1, 20, 1)),

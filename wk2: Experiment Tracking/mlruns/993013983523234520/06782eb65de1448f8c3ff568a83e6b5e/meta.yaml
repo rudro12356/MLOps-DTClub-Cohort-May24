@@ -1,0 +1,15 @@
+artifact_uri: file:///workspaces/MLOps-DTClubcs-Cohort-May24/wk2%3A%20Experiment%20Tracking/mlruns/993013983523234520/06782eb65de1448f8c3ff568a83e6b5e/artifacts
+end_time: 1716863551646
+entry_point_name: ''
+experiment_id: '993013983523234520'
+lifecycle_stage: active
+run_id: 06782eb65de1448f8c3ff568a83e6b5e
+run_name: Random Forest
+run_uuid: 06782eb65de1448f8c3ff568a83e6b5e
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1716863539649
+status: 3
+tags: []
+user_id: codespace
