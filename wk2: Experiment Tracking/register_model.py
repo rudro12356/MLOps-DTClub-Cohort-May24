@@ -8,13 +8,18 @@ from mlflow.tracking import MlflowClient
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 
+mlflow.sklearn.autolog(log_input_examples=False)
+
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="setuptools")
+
 HPO_EXPERIMENT_NAME = "random-forest-hyperopt"
 EXPERIMENT_NAME = "random-forest-best-models"
-RF_PARAMS = ['max_depth', 'n_estimators', 'min_samples_split', 'min_samples_leaf', 'random_state']
+RF_PARAMS = ['max_depth', 'n_estimators', 'min_samples_split', 'min_samples_leaf',]
 
 mlflow.set_tracking_uri("http://127.0.0.1:5000")
 mlflow.set_experiment(EXPERIMENT_NAME)
-mlflow.sklearn.autolog()
+# mlflow.sklearn.autolog()
 
 
 def load_pickle(filename):
@@ -39,7 +44,8 @@ def train_and_log_model(data_path, params):
         mlflow.log_metric("val_rmse", val_rmse)
         test_rmse = mean_squared_error(y_test, rf.predict(X_test), squared=False)
         mlflow.log_metric("test_rmse", test_rmse)
-
+        
+    return test_rmse, mlflow.active_run().info.run_id
 
 @click.command()
 @click.option(
@@ -54,10 +60,7 @@ def train_and_log_model(data_path, params):
     help="Number of top models that need to be evaluated to decide which one to promote"
 )
 def run_register_model(data_path: str, top_n: int):
-
     client = MlflowClient()
-
-    # Retrieve the top_n model runs and log the models
     experiment = client.get_experiment_by_name(HPO_EXPERIMENT_NAME)
     runs = client.search_runs(
         experiment_ids=experiment.experiment_id,
@@ -65,16 +68,17 @@ def run_register_model(data_path: str, top_n: int):
         max_results=top_n,
         order_by=["metrics.rmse ASC"]
     )
+
+    runs_and_metrics = []
     for run in runs:
-        train_and_log_model(data_path=data_path, params=run.data.params)
+        test_rmse, run_id = train_and_log_model(data_path=data_path, params=run.data.params)
+        runs_and_metrics.append((test_rmse, run_id))
 
-    # Select the model with the lowest test RMSE
-    experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
-    # best_run = client.search_runs( ...  )[0]
+    runs_and_metrics.sort(key=lambda x: x[0])
+    best_run_id = runs_and_metrics[0][1]
 
-    # Register the best model
-    # mlflow.register_model( ... )
-
+    model_uri = f"runs:/{best_run_id}/model"
+    mlflow.register_model(model_uri, "random-forest-best-model")
 
 if __name__ == '__main__':
     run_register_model()
